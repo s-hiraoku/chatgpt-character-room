@@ -1,0 +1,33 @@
+{
+  "name": "chatgpt-character-room",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "だらぱんと過ごす、自分のキャラと背景を使ったMCP App",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "start": "node dist/server.mjs",
+    "dev": "npm run build && npm start",
+    "preview:bridge": "node scripts/preview-bridge.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test test/*.test.ts",
+    "check": "npm run typecheck && npm run build && npm test"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/ext-apps": "1.7.5",
+    "@modelcontextprotocol/sdk": "1.31.0",
+    "@openai/mcp-extensions": "0.1.0",
+    "express": "^5.1.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^24.0.0",
+    "esbuild": "^0.28.1",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.3"
+  }
+}

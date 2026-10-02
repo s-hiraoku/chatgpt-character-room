@@ -95,11 +95,70 @@ test("multiple characters, removal of all characters and saved layouts are suppo
     }),
   );
   const updated = store.update(room.roomId, 0, saved);
-  assert.equal(updated.scene.placements.length, 2);
+  assert.equal(updated.scene.placements.length, 3);
   const empty = store.update(room.roomId, 1, {
     ...updated.scene,
     placements: [],
   });
   assert.equal(empty.scene.placements.length, 0);
   assert.deepEqual(store.update(room.roomId, 2, saved).scene, saved);
+});
+
+test("new rooms start with small Darapan, Mochipan and four movable furniture items", () => {
+  const room = new RoomStore().create();
+  assert.equal(room.scene.version, 2);
+  assert.deepEqual(
+    room.scene.placements.map((item) => [
+      item.characterId,
+      item.variantId,
+      item.size,
+    ]),
+    [
+      ["darapan", "cyber", 27],
+      ["mochipan", "normal", 14],
+    ],
+  );
+  assert.deepEqual(
+    room.scene.furniture.map((item) => item.furnitureId),
+    ["sofa", "table", "lamp", "plant"],
+  );
+});
+
+test("furniture updates round trip and reject invalid IDs, rotations, scales and shared placement IDs", () => {
+  const store = new RoomStore();
+  const room = store.create();
+  const scene = structuredClone(room.scene);
+  Object.assign(scene.furniture[0], { x: 78, y: 64, rotation: 90, scale: 1.3 });
+  assert.deepEqual(store.update(room.roomId, 0, scene).scene, scene);
+  for (const patch of [
+    { furnitureId: "unknown" },
+    { rotation: 360 },
+    { scale: 9 },
+    { x: 0 },
+    { id: scene.placements[0].id },
+  ]) {
+    const invalid = structuredClone(scene);
+    Object.assign(invalid.furniture[0], patch);
+    assert.equal(
+      callRoomTool(store, "room_update", {
+        roomId: room.roomId,
+        baseRevision: 1,
+        scene: invalid,
+      }).isError,
+      true,
+    );
+  }
+  const duplicated = {
+    ...scene,
+    furniture: [scene.furniture[0], scene.furniture[0]],
+  };
+  assert.equal(
+    callRoomTool(store, "room_update", {
+      roomId: room.roomId,
+      baseRevision: 1,
+      scene: duplicated,
+    }).isError,
+    true,
+  );
+  assert.equal(store.get(room.roomId).revision, 1);
 });

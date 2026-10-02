@@ -16,7 +16,7 @@
         <div class="brand">
           <span class="brand-mark" aria-hidden="true">◒</span>
           <div>
-            <p class="eyebrow">CHARACTER ROOM</p>
+            <p class="eyebrow">DARAPAN & MOCHIPAN</p>
             <h1>だらぱんの部屋</h1>
           </div>
         </div>
@@ -26,7 +26,7 @@
         <section class="room-panel" aria-labelledby="scene-heading">
           <div class="scene-topline">
             <div>
-              <p class="eyebrow">MY LITTLE SPACE</p>
+              <p class="eyebrow">MY LITTLE ATELIER</p>
               <h2 id="scene-heading">夜のアトリエ</h2>
             </div>
             <label class="edit-toggle"
@@ -39,24 +39,53 @@
             data-background="night"
             aria-label="キャラクターの部屋"
           >
-            <div class="room-art" aria-hidden="true">
-              <div class="window">
-                <span class="moon"></span><span class="skyline"></span>
-              </div>
-              <div class="light"></div>
-              <div class="floor"></div>
-              <div class="plant"><i></i><i></i><i></i><b></b></div>
-            </div>
-            <p class="scene-message">今日は、ここでひと休み。</p>
+            <div
+              id="room-fallback"
+              class="room-fallback"
+              aria-hidden="true"
+            ></div>
+            <p id="scene-loading" class="scene-loading" role="status">
+              部屋を読み込んでいます…
+            </p>
             <div class="actors" id="actors"></div>
             <p id="empty" class="empty" hidden>
               まだ誰もいません。<br />キャラを追加して、部屋を作ろう。
             </p>
             <span class="scene-tag">DARAPAN'S ATELIER</span>
           </div>
-          <div class="scene-caption">
-            <span>サイバーパンダのだらぱん</span><span id="count">—</span>
+          <div
+            id="camera-controls"
+            class="camera-controls"
+            aria-label="視点の操作"
+          >
+            <button type="button" id="camera-left" aria-label="視点を左へ回す">
+              ↶
+            </button>
+            <button type="button" id="camera-right" aria-label="視点を右へ回す">
+              ↷
+            </button>
+            <button type="button" id="camera-in" aria-label="部屋に近づく">
+              ＋
+            </button>
+            <button type="button" id="camera-out" aria-label="部屋から離れる">
+              −
+            </button>
+            <button type="button" id="camera-reset">視点を戻す</button>
           </div>
+          <div class="scene-caption">
+            <span>だらぱんともちぱん、ふたりのアトリエ</span
+            ><span id="count">—</span>
+          </div>
+          <section
+            class="furniture-section"
+            aria-labelledby="furniture-heading"
+          >
+            <div class="section-heading">
+              <h3 id="furniture-heading">家具を置く</h3>
+              <span id="furniture-count">—</span>
+            </div>
+            <div id="furniture-catalog" class="furniture-catalog"></div>
+          </section>
           <section
             class="background-section"
             aria-labelledby="background-heading"
@@ -65,7 +94,7 @@
             <div id="backgrounds" class="background-options"></div>
           </section>
           <p class="hint">
-            キャラをドラッグして配置。矢印キーでも移動できます。
+            キャラと家具をドラッグして配置。何もないところをドラッグすると視点が回ります。矢印キーやスライダーでも調整できます。
           </p>
         </section>
         <aside class="inspector" aria-labelledby="inspector-heading">
@@ -92,12 +121,12 @@
             ><select id="variant"></select>
             <label class="range-label" for="size"
               >大きさ <output id="size-value"></output></label
-            ><input id="size" type="range" min="20" max="70" step="1" />
+            ><input id="size" type="range" min="8" max="70" step="1" />
             <label class="range-label" for="x"
               >左右 <output id="x-value"></output></label
             ><input id="x" type="range" min="10" max="90" step="1" />
             <label class="range-label" for="y"
-              >上下 <output id="y-value"></output></label
+              >奥行き <output id="y-value"></output></label
             ><input id="y" type="range" min="45" max="96" step="1" />
             <label class="flip"
               ><input type="checkbox" id="flip" />左右を反転</label
@@ -106,6 +135,56 @@
               このキャラを部屋から外す
             </button>
           </div>
+          <section
+            class="placed-furniture"
+            aria-labelledby="placed-furniture-heading"
+          >
+            <hr />
+            <h3 id="placed-furniture-heading">部屋の家具</h3>
+            <div id="furniture-list" class="furniture-list"></div>
+            <div id="furniture-selection" hidden>
+              <h3 id="furniture-name"></h3>
+              <label class="range-label" for="furniture-x"
+                >左右 <output id="furniture-x-value"></output></label
+              ><input
+                id="furniture-x"
+                type="range"
+                min="10"
+                max="90"
+                step="1"
+              />
+              <label class="range-label" for="furniture-y"
+                >奥行き <output id="furniture-y-value"></output></label
+              ><input
+                id="furniture-y"
+                type="range"
+                min="45"
+                max="96"
+                step="1"
+              />
+              <label class="range-label" for="furniture-rotation"
+                >向き <output id="furniture-rotation-value"></output></label
+              ><input
+                id="furniture-rotation"
+                type="range"
+                min="0"
+                max="359"
+                step="1"
+              />
+              <label class="range-label" for="furniture-scale"
+                >大きさ <output id="furniture-scale-value"></output></label
+              ><input
+                id="furniture-scale"
+                type="range"
+                min="0.6"
+                max="1.6"
+                step="0.1"
+              />
+              <button type="button" id="remove-furniture" class="remove-button">
+                この家具を部屋から外す
+              </button>
+            </div>
+          </section>
           <div class="save-actions">
             <button type="button" id="save" disabled>配置を保存</button
             ><button type="button" id="load" disabled>配置を読み込む</button

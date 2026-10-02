@@ -39,14 +39,13 @@ host.post("/tools", async (req, res) => {
   try {
     res.json(await client.callTool(req.body));
   } catch {
-    res
-      .status(502)
-      .json({
-        isError: true,
-        content: [{ type: "text", text: "MCP request failed" }],
-      });
+    res.status(502).json({
+      isError: true,
+      content: [{ type: "text", text: "MCP request failed" }],
+    });
   }
 });
-host.listen(3001, "127.0.0.1", () =>
-  console.log("MCP Apps test host: http://127.0.0.1:3001"),
+const port = Number(process.env.PREVIEW_PORT ?? 3001);
+host.listen(port, "127.0.0.1", () =>
+  console.log(`MCP Apps test host: http://127.0.0.1:${port}`),
 );

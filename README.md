@@ -30,6 +30,8 @@ npm run check   # 型検査、ビルド、状態管理とMCPのテスト
 
 ## 技術を学ぶ
 
+3D制作の準備は[開発環境と技術スタック](docs/development-environment.md)にまとめています。Blender・Blender MCPのセットアップ、Codex接続、Three.jsでのGLB読み込みの確認まで用意しました。部屋の3D表示は次の実装です。
+
 [仕組みとMCPの読み方](docs/architecture.md)に、通信の流れ、JSONの実例、各ファイルの役割をまとめています。
 
 1. `src/shared/catalog.ts` — キャラと背景の一覧。

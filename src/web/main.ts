@@ -1,16 +1,25 @@
 import { App } from "@modelcontextprotocol/ext-apps";
 import { OpenAIExtensions } from "@openai/mcp-extensions/app";
-import { backgrounds, characters, findVariant } from "../shared/catalog.js";
+import {
+  backgrounds,
+  characters,
+  findVariant,
+  furnitureCatalog,
+} from "../shared/catalog.js";
 import {
   roomSchema,
-  sceneSchema,
+  parseSavedScene,
+  type FurniturePlacement,
   type Placement,
   type Room,
   type Scene,
   type ToolName,
 } from "../shared/contracts.js";
 import "./style.css";
+import { RoomView } from "./room-view.js";
+import { floorPoint, floorPlacement } from "../shared/room-layout.js";
 
+declare const __ASSET_MODELS__: Record<string, string>;
 declare const __ASSET_IMAGES__: Record<string, string>;
 declare global {
   interface Window {
@@ -34,12 +43,15 @@ const status = el<HTMLParagraphElement>("status");
 const editMode = el<HTMLInputElement>("edit-mode");
 const inHost = window.parent !== window;
 const app = inHost
-  ? new App({ name: "character-room", version: "0.1.0" }, {})
+  ? new App({ name: "character-room", version: "0.2.0" }, {})
   : null;
 const extensions = app ? new OpenAIExtensions(app) : null;
 let connected = !inHost;
 let room: Room | null = null;
 let selectedId: string | null = null;
+let selectedFurnitureId: string | null = null;
+let viewer: RoomView | null = null;
+let actorDraft: Placement | null = null;
 let busy = false;
 let contextQueue: Promise<void> = Promise.resolve();
 const actorNodes = new Map<string, HTMLButtonElement>();
@@ -58,7 +70,8 @@ function describeRoom(value: Room) {
         (item) =>
           `${characters.find((character) => character.id === item.characterId)?.name}（配置ID:${item.id}、横:${item.x}%、足元:${item.y}%、高さ:${item.size}%）`,
       )
-      .join("、")
+      .join("、") +
+    `。家具:${value.scene.furniture.map((item) => `${furnitureCatalog.find((value) => value.id === item.furnitureId)?.name}（配置ID:${item.id}、左右:${item.x}、奥行き:${item.y}、回転:${item.rotation}度、倍率:${item.scale}）`).join("、")}`
   );
 }
 
@@ -97,7 +110,15 @@ function acceptResult(result: ToolResult) {
   )
     return;
   room = parsed.data;
-  if (!room.scene.placements.some((item) => item.id === selectedId))
+  if (
+    selectedFurnitureId &&
+    !room.scene.furniture.some((item) => item.id === selectedFurnitureId)
+  )
+    selectedFurnitureId = null;
+  if (
+    !selectedFurnitureId &&
+    !room.scene.placements.some((item) => item.id === selectedId)
+  )
     selectedId = room.scene.placements[0]?.id ?? null;
   render();
   if (!app) {
@@ -212,6 +233,7 @@ function makeActor(id: string) {
   button.append(image);
   button.addEventListener("click", () => {
     selectedId = id;
+    selectedFurnitureId = null;
     render();
   });
   button.addEventListener("keydown", (event) => {
@@ -225,6 +247,7 @@ function makeActor(id: string) {
       return;
     event.preventDefault();
     selectedId = id;
+    selectedFurnitureId = null;
     const step = event.shiftKey ? 5 : 1;
     patchSelected({
       x: Math.max(
@@ -265,6 +288,7 @@ function makeActor(id: string) {
     if (event.button !== 0 || busy || !room || !editMode.checked) return;
     const item = room.scene.placements.find((value) => value.id === id)!;
     selectedId = id;
+    selectedFurnitureId = null;
     render();
     drag = {
       pointerId: event.pointerId,
@@ -278,6 +302,17 @@ function makeActor(id: string) {
   });
   function draftPosition(event: PointerEvent) {
     if (!drag) return null;
+    if (viewer) {
+      const delta = viewer.floorDelta(
+        drag.startX,
+        drag.startY,
+        event.clientX,
+        event.clientY,
+      );
+      if (!delta) return { x: drag.item.x, y: drag.item.y };
+      const point = floorPoint(drag.item);
+      return floorPlacement(point.x + delta.x, point.z + delta.z);
+    }
     const rect = stage.getBoundingClientRect();
     return {
       x: Math.round(
@@ -305,13 +340,16 @@ function makeActor(id: string) {
     const patch = draftPosition(event)!;
     drag.moved ||=
       Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) > 3;
-    placeActor(button, { ...drag.item, ...patch });
+    actorDraft = { ...drag.item, ...patch };
+    viewer?.previewPlacement(actorDraft);
+    placeActor(button, actorDraft);
   });
   button.addEventListener("pointerup", (event) => {
     if (!drag || event.pointerId !== drag.pointerId) return;
     const finished = drag;
     const patch = draftPosition(event)!;
     drag = null;
+    actorDraft = null;
     button.releasePointerCapture(event.pointerId);
     if (!finished.moved) return;
     if (room?.revision !== finished.revision) {
@@ -329,6 +367,16 @@ function makeActor(id: string) {
 }
 
 function placeActor(button: HTMLButtonElement, item: Placement) {
+  if (viewer) {
+    const projected = viewer.project(item);
+    button.style.left = `${projected.left}%`;
+    button.style.top = `${projected.top}%`;
+    button.style.height = `${projected.height}px`;
+    button.style.width = `${projected.width}px`;
+    button.style.zIndex = String(Math.round(projected.top));
+    button.hidden = !projected.visible;
+    return;
+  }
   const rect = stage.getBoundingClientRect();
   const width = (rect.height * item.size) / 100;
   const halfWidth = rect.width ? (width / rect.width) * 50 : 10;
@@ -342,6 +390,14 @@ function placeActor(button: HTMLButtonElement, item: Placement) {
 }
 
 function render() {
+  actorDraft = null;
+  if (room)
+    viewer?.update(
+      room,
+      selectedFurnitureId ?? selectedId,
+      editMode.checked && !busy,
+    );
+  renderFurniture();
   stage.classList.toggle("editing", editMode.checked);
   const currentIds = new Set(
     room?.scene.placements.map((item) => item.id) ?? [],
@@ -381,8 +437,9 @@ function render() {
     stage.dataset.background = background.id;
     el("scene-heading").textContent = background.name;
     stage.classList.toggle("custom-background", !!background.image);
-    (stage.querySelector(".room-art") as HTMLElement).style.backgroundImage =
-      background.image ? `url("${images[background.image]}")` : "";
+    el("room-fallback").style.backgroundImage = background.image
+      ? `url("${images[background.image]}")`
+      : "";
   }
   for (const button of el("backgrounds").querySelectorAll<HTMLButtonElement>(
     "button",
@@ -421,6 +478,7 @@ function render() {
     button.append(img, text);
     button.addEventListener("click", () => {
       selectedId = item.id;
+      selectedFurnitureId = null;
       render();
     });
     list.append(button);
@@ -507,6 +565,7 @@ el("add").addEventListener(
       )!;
       const id = crypto.randomUUID();
       selectedId = id;
+      selectedFurnitureId = null;
       await updateScene({
         ...room.scene,
         placements: [
@@ -517,7 +576,7 @@ el("add").addEventListener(
             variantId: character.variants[0].id,
             x: 35 + ((room.scene.placements.length * 7) % 35),
             y: 91,
-            size: 52,
+            size: character.id === "mochipan" ? 14 : 27,
             flipped: false,
           },
         ],
@@ -534,7 +593,11 @@ for (const key of ["size", "x", "y"] as const) {
     el(key + "-value").textContent = `${value}%`;
     const item = selected();
     const node = item && actorNodes.get(item.id);
-    if (node && item) placeActor(node, { ...item, [key]: value });
+    if (node && item) {
+      actorDraft = { ...item, [key]: value };
+      viewer?.previewPlacement(actorDraft);
+      placeActor(node, actorDraft);
+    }
   });
   el<HTMLInputElement>(key).addEventListener("change", () =>
     patchSelected({ [key]: Number(el<HTMLInputElement>(key).value) }),
@@ -584,12 +647,15 @@ el<HTMLInputElement>("load-file").addEventListener(
       if (!file) return;
       if (file.size > 32_768)
         throw Error("配置ファイルが大きすぎます (32KBまで)。");
-      const parsed = sceneSchema.safeParse(JSON.parse(await file.text()));
-      if (!parsed.success)
+      let scene: Scene;
+      try {
+        scene = parseSavedScene(JSON.parse(await file.text()));
+      } catch {
         throw Error(
           "この配置ファイルは読み込めません。登録されている素材と配置の形式を確認してください。",
         );
-      await updateScene(parsed.data);
+      }
+      await updateScene(scene);
       announce("保存した配置を読み込みました。");
     }),
 );
@@ -651,8 +717,245 @@ async function start() {
       );
     });
   }
-  if (room) announce("部屋ができました。だらぱんを自由に配置できます。");
+  if (room) announce("だらぱんともちぱんの部屋へようこそ。");
 }
+function selectedFurniture() {
+  return room?.scene.furniture.find((item) => item.id === selectedFurnitureId);
+}
+function patchFurniture(patch: Partial<FurniturePlacement>) {
+  const item = selectedFurniture();
+  if (!item || !room) return;
+  const scene = structuredClone(room.scene);
+  Object.assign(
+    scene.furniture.find((value) => value.id === item.id)!,
+    patch,
+  );
+  void perform(async () => {
+    await updateScene(scene);
+    announce("家具の配置を更新しました。");
+  });
+}
+function renderFurniture() {
+  const list = el("furniture-list");
+  const focused =
+    document.activeElement instanceof HTMLElement &&
+    list.contains(document.activeElement)
+      ? document.activeElement.dataset.furniture
+      : undefined;
+  list.replaceChildren();
+  for (const item of room?.scene.furniture ?? []) {
+    const info = furnitureCatalog.find(
+      (value) => value.id === item.furnitureId,
+    )!;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.furniture = item.id;
+    button.textContent = info.name;
+    button.setAttribute(
+      "aria-pressed",
+      String(item.id === selectedFurnitureId),
+    );
+    button.setAttribute("aria-disabled", String(busy));
+    button.addEventListener("click", () => {
+      selectedFurnitureId = item.id;
+      selectedId = null;
+      render();
+    });
+    button.addEventListener("keydown", (event) => {
+      if (
+        !editMode.checked ||
+        busy ||
+        !["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)
+      )
+        return;
+      event.preventDefault();
+      selectedFurnitureId = item.id;
+      selectedId = null;
+      patchFurniture({
+        x: Math.max(
+          10,
+          Math.min(
+            90,
+            item.x +
+              (event.key === "ArrowLeft"
+                ? -1
+                : event.key === "ArrowRight"
+                  ? 1
+                  : 0),
+          ),
+        ),
+        y: Math.max(
+          45,
+          Math.min(
+            96,
+            item.y +
+              (event.key === "ArrowUp"
+                ? -1
+                : event.key === "ArrowDown"
+                  ? 1
+                  : 0),
+          ),
+        ),
+      });
+    });
+    list.append(button);
+  }
+  if (focused)
+    list
+      .querySelector<HTMLButtonElement>(`[data-furniture="${focused}"]`)
+      ?.focus({ preventScroll: true });
+  const item = selectedFurniture();
+  el("furniture-selection").hidden = !item;
+  if (item) {
+    el("furniture-name").textContent = furnitureCatalog.find(
+      (value) => value.id === item.furnitureId,
+    )!.name;
+    for (const key of ["x", "y", "rotation", "scale"] as const) {
+      const input = el<HTMLInputElement>("furniture-" + key);
+      input.disabled = busy;
+      if (!busy) {
+        input.value = String(item[key]);
+        el("furniture-" + key + "-value").textContent =
+          key === "rotation"
+            ? `${item[key]}°`
+            : key === "scale"
+              ? `${item[key]}倍`
+              : String(item[key]);
+      }
+    }
+  }
+  el<HTMLButtonElement>("remove-furniture").disabled = busy;
+  for (const button of el(
+    "furniture-catalog",
+  ).querySelectorAll<HTMLButtonElement>("button"))
+    button.disabled = busy || !room || room.scene.furniture.length >= 12;
+  el("furniture-count").textContent = room
+    ? `${room.scene.furniture.length} / 12`
+    : "—";
+}
+for (const info of furnitureCatalog) {
+  const button = document.createElement("button");
+  button.type = "button";
+  const icon = document.createElement("span");
+  icon.textContent = info.icon;
+  icon.setAttribute("aria-hidden", "true");
+  const name = document.createElement("span");
+  name.textContent = info.name;
+  button.append(icon, name);
+  button.addEventListener(
+    "click",
+    () =>
+      void perform(async () => {
+        if (!room) return;
+        const id = crypto.randomUUID();
+        selectedFurnitureId = id;
+        selectedId = null;
+        await updateScene({
+          ...room.scene,
+          furniture: [
+            ...room.scene.furniture,
+            { id, furnitureId: info.id, x: 50, y: 85, rotation: 0, scale: 1 },
+          ],
+        });
+        announce(`${info.name}を置きました。`);
+      }),
+  );
+  el("furniture-catalog").append(button);
+}
+for (const key of ["x", "y", "rotation", "scale"] as const) {
+  el<HTMLInputElement>("furniture-" + key).addEventListener("input", () => {
+    const value = Number(el<HTMLInputElement>("furniture-" + key).value);
+    el("furniture-" + key + "-value").textContent =
+      key === "rotation"
+        ? `${value}°`
+        : key === "scale"
+          ? `${value}倍`
+          : String(value);
+  });
+  el<HTMLInputElement>("furniture-" + key).addEventListener("change", () =>
+    patchFurniture({
+      [key]: Number(el<HTMLInputElement>("furniture-" + key).value),
+    }),
+  );
+}
+el("remove-furniture").addEventListener(
+  "click",
+  () =>
+    void perform(async () => {
+      if (!room) return;
+      await updateScene({
+        ...room.scene,
+        furniture: room.scene.furniture.filter(
+          (item) => item.id !== selectedFurnitureId,
+        ),
+      });
+      announce("家具を部屋から外しました。");
+    }),
+);
+for (const [id, action] of Object.entries({
+  "camera-reset": () => viewer?.resetCamera(),
+  "camera-left": () => viewer?.rotate(-0.18),
+  "camera-right": () => viewer?.rotate(0.18),
+  "camera-in": () => viewer?.zoom(0.9),
+  "camera-out": () => viewer?.zoom(1.1),
+}))
+  el(id).addEventListener("click", action);
+try {
+  viewer = new RoomView(stage, images, {
+    project: () => {
+      for (const item of room?.scene.placements ?? []) {
+        const node = actorNodes.get(item.id);
+        if (node)
+          placeActor(node, actorDraft?.id === item.id ? actorDraft : item);
+      }
+    },
+    selectFurniture: (id) => {
+      selectedFurnitureId = id;
+      selectedId = null;
+      render();
+    },
+    moveFurniture: (id, patch, revision) => {
+      if (!room || room.revision !== revision) {
+        render();
+        announce(
+          "ドラッグ中に配置が更新されました。もう一度動かしてください。",
+        );
+        return;
+      }
+      selectedFurnitureId = id;
+      patchFurniture(patch);
+    },
+    message: announce,
+  });
+  stage.classList.add("webgl");
+  void viewer
+    .load(__ASSET_MODELS__)
+    .then(() => {
+      el("scene-loading").hidden = true;
+      stage.dataset.ready = "true";
+    })
+    .catch((error) => {
+      el("scene-loading").textContent =
+        "3D素材の読み込みに失敗しました。再読み込みしてください。";
+      announce(
+        error instanceof Error
+          ? error.message
+          : "3D素材を読み込めませんでした。",
+      );
+    });
+} catch {
+  viewer = null;
+  el("scene-loading").textContent =
+    "この環境では3D表示を利用できません。キャラの平面プレビューを表示しています。";
+  stage.dataset.ready = "fallback";
+  for (const button of el(
+    "camera-controls",
+  ).querySelectorAll<HTMLButtonElement>("button"))
+    button.disabled = true;
+}
+window.addEventListener("pagehide", (event) => {
+  if (!event.persisted) viewer?.dispose();
+});
 void start().catch((error) => {
   el("connection").textContent = "接続できません";
   announce(error instanceof Error ? error.message : "接続に失敗しました。");

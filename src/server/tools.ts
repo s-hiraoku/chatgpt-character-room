@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { characters, backgrounds } from "../shared/catalog.js";
+import {
+  characters,
+  backgrounds,
+  furnitureCatalog,
+} from "../shared/catalog.js";
 import { toolSchemas, type ToolName } from "../shared/contracts.js";
 import { RoomStore, RoomError } from "./store.js";
 
@@ -26,7 +30,7 @@ export function callRoomTool(store: RoomStore, name: ToolName, args: unknown) {
       }
       case "room_catalog":
         toolSchemas.room_catalog.parse(args);
-        data = { characters, backgrounds };
+        data = { characters, backgrounds, furnitureCatalog };
         break;
       default:
         throw new Error("未登録のツールです。");

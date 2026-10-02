@@ -1,19 +1,19 @@
 # 3D制作の開発環境
 
-この段階では、Blender MCPで素材を制作できる環境とThree.jsの依存関係を用意します。部屋の3D表示・家具・新キャラの画面への組み込みは次の実装です。現在のアプリは2D版のままです。
+この段階では、Blender MCPで素材を制作できる環境とThree.jsの依存関係を用意します。3D版ではこの環境を使ってGLBを制作し、だらぱん・もちぱんと家具の配置を実装しています。[実装解説](3d-room.md)も参照してください。
 
 ## 技術スタック
 
-| 用途 | 採用するもの | 役割 |
-| --- | --- | --- |
-| 開発・サーバー | Node.js 24、TypeScript、Express、esbuild | アプリのビルドとHTTP MCPサーバー |
-| 画面の3D描画 | Three.js 0.185.1、@types/three 0.185.0 | GLBの読み込み、カメラ、光、家具の選択 |
-| ChatGPTとの通信 | MCP SDK 1.31.0、MCP Apps SDK 1.7.5、OpenAI MCP Extensions 0.1.0 | ツール、UIリソース、ホストと画面の連携 |
-| 3D素材制作 | Blender 5.2.2 LTS | 部屋や家具を作り、GLBへ書き出す |
-| Codexから制作を操作 | mcp-for-blender 2.1.3 | Blenderのシーン取得、Python操作、書き出し |
-| Blender MCPの実行 | uv/uvx、管理されたPython 3.11 | Blender自身のPythonとは別のMCPサーバープロセス |
-| 画像素材 | 透過PNG、デザイン資料PNG | だらぱん・もちぱんの姿と部屋の方向性 |
-| 品質確認 | 型検査、ビルド、Nodeテスト、GitHub Actions | 既存アプリの検証と開発環境の接続試験 |
+| 用途                | 採用するもの                                                    | 役割                                           |
+| ------------------- | --------------------------------------------------------------- | ---------------------------------------------- |
+| 開発・サーバー      | Node.js 24、TypeScript、Express、esbuild                        | アプリのビルドとHTTP MCPサーバー               |
+| 画面の3D描画        | Three.js 0.185.1、@types/three 0.185.0                          | GLBの読み込み、カメラ、光、家具の選択          |
+| ChatGPTとの通信     | MCP SDK 1.31.0、MCP Apps SDK 1.7.5、OpenAI MCP Extensions 0.1.0 | ツール、UIリソース、ホストと画面の連携         |
+| 3D素材制作          | Blender 5.2.2 LTS                                               | 部屋や家具を作り、GLBへ書き出す                |
+| Codexから制作を操作 | mcp-for-blender 2.1.3                                           | Blenderのシーン取得、Python操作、書き出し      |
+| Blender MCPの実行   | uv/uvx、管理されたPython 3.11                                   | Blender自身のPythonとは別のMCPサーバープロセス |
+| 画像素材            | 透過PNG、デザイン資料PNG                                        | だらぱん・もちぱんの姿と部屋の方向性           |
+| 品質確認            | 型検査、ビルド、Nodeテスト、GitHub Actions                      | 既存アプリの検証と開発環境の接続試験           |
 
 Nodeの推奨系統は`.nvmrc`、アプリの依存関係は`package-lock.json`で管理します。Blender MCPは起動スクリプトでパッケージのバージョンを固定します。uvxで解決されるPython依存パッケージ全体の固定はまだ行っていません。
 
@@ -85,17 +85,17 @@ codex mcp get darapan-blender
 
 実際の設定値は`scripts/dev-environment.sh`にまとまっています。
 
-| 設定 | 値・目的 |
-| --- | --- |
-| BLENDER_HOST / BLENDER_PORT | `127.0.0.1` / `9876`。同じPC上で接続 |
-| BLENDER_USER_CONFIG / BLENDER_USER_SCRIPTS | `.local/blender-user/`内。既存のBlender設定と分離 |
-| BLENDERMCP_ADDONS_DIR | 専用scripts/addons。セットアップ時のコピー先 |
-| UV_CACHE_DIR / UV_TOOL_DIR / UV_PYTHON_INSTALL_DIR | `.local/`内。GUI起動でも同じ実行環境を使う |
-| UV_PYTHON_PREFERENCE | `only-managed`。システムPythonの変更を避ける |
-| BLENDER_MCP_SAFE_MODE | `1`。MCP経由のPythonコードに制限を適用。通常のbpy操作とGLB書き出しは許可 |
-| DISABLE_TELEMETRY / アドオンのtelemetry_consent | `true` / `false`。プロンプト・画像等のテレメトリーを無効化 |
-| BLENDERMCP_NO_UPDATE_CHECK | `1`。アドオン更新を自動で確認せず、バージョン変更は明示的に行う |
-| BLENDER_MCP_APPS / BLENDER_MCP_OPENAI_FORMS | `0`。まず標準MCPツールで接続。専用ビューポート拡張は後で検討 |
+| 設定                                               | 値・目的                                                                 |
+| -------------------------------------------------- | ------------------------------------------------------------------------ |
+| BLENDER_HOST / BLENDER_PORT                        | `127.0.0.1` / `9876`。同じPC上で接続                                     |
+| BLENDER_USER_CONFIG / BLENDER_USER_SCRIPTS         | `.local/blender-user/`内。既存のBlender設定と分離                        |
+| BLENDERMCP_ADDONS_DIR                              | 専用scripts/addons。セットアップ時のコピー先                             |
+| UV_CACHE_DIR / UV_TOOL_DIR / UV_PYTHON_INSTALL_DIR | `.local/`内。GUI起動でも同じ実行環境を使う                               |
+| UV_PYTHON_PREFERENCE                               | `only-managed`。システムPythonの変更を避ける                             |
+| BLENDER_MCP_SAFE_MODE                              | `1`。MCP経由のPythonコードに制限を適用。通常のbpy操作とGLB書き出しは許可 |
+| DISABLE_TELEMETRY / アドオンのtelemetry_consent    | `true` / `false`。プロンプト・画像等のテレメトリーを無効化               |
+| BLENDERMCP_NO_UPDATE_CHECK                         | `1`。アドオン更新を自動で確認せず、バージョン変更は明示的に行う          |
+| BLENDER_MCP_APPS / BLENDER_MCP_OPENAI_FORMS        | `0`。まず標準MCPツールで接続。専用ビューポート拡張は後で検討             |
 
 通常のMCPサーバー起動はuvxのオフラインモードでインストール済みパッケージを使います。初回のセットアップではネットワークで取得します。キャッシュを消した場合は`npm run setup:blender`を再実行してください。
 
@@ -114,14 +114,13 @@ npm run check
 
 出力は`.local/verification/environment-check.glb`と`report.json`です。検証用モデルは部屋や家具の完成素材ではありません。
 
-`npm run check`はBlenderなしでも実行でき、型検査・ビルド・8件のアプリテストを確認します。CIはNode.js 24でこのチェックを実行します。
+`npm run check`はBlenderなしでも実行でき、型検査・ビルド・14件のアプリ・素材テストを確認します。CIはNode.js 24でこのチェックを実行します。
 
-## 次の実装で扱うこと
+## 今後の制作で扱うこと
 
-- Blenderで床・壁・家具を制作し、編集元の`.blend`と配布用の`.glb`を保存する。
-- Three.jsで部屋を描き、透過PNGのだらぱん・もちぱんを板状のオブジェクトとして配置する。キャラの完全な3D化は別の制作工程。
-- 2キャラの大きさは採用した部屋イメージに合わせる。初回サンプルの約半分という意図を配置スケールで表す。
-- 画像・GLBの配信方法とCSPを設計する。現行UIは画像等をHTMLに内包するため、GLBの読み込みをそのまま追加するだけでは対応しない。
+- 現在の部屋と家具のGLB、編集用`.blend`は`assets/models/`に保存済み。`npm run build:models`でBlender MCP経由で再制作する。
+- Three.jsでの部屋の描画と透過PNGの2キャラ配置は実装済み。キャラの完全な3D化は別の制作工程。
+- 画像・GLBは今はHTMLへ内包する。素材が増えたら配信方式とCSPを再設計する。
 - ChatGPT実ホストで表示・ツール操作を確認する。ローカルMCP接続試験だけでは実ホストの動作確認は完了しない。
 
 保存した資料と生成素材は[素材一覧](../assets/README.md)、この環境の検証結果は[検証記録](development-environment-verification.md)を参照してください。

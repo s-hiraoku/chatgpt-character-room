@@ -1,6 +1,10 @@
 import { build } from "esbuild";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { characters, backgrounds } from "../src/shared/catalog.ts";
+import {
+  characters,
+  backgrounds,
+  furnitureCatalog,
+} from "../src/shared/catalog.ts";
 
 const images = {};
 for (const file of new Set([
@@ -9,7 +13,7 @@ for (const file of new Set([
   ),
   ...backgrounds.map((item) => item.image).filter(Boolean),
 ])) {
-  if (!/^[\w-]+\.(png|jpe?g|webp)$/.test(file))
+  if (!/^(?:[\w-]+\/)*[\w-]+\.(png|jpe?g|webp)$/.test(file))
     throw new Error(`Unsupported asset filename: ${file}`);
   const bytes = await readFile(new URL(`../assets/${file}`, import.meta.url));
   const mime = /\.png$/.test(file)
@@ -18,6 +22,17 @@ for (const file of new Set([
       ? "image/webp"
       : "image/jpeg";
   images[file] = `data:${mime};base64,${bytes.toString("base64")}`;
+}
+const models = {};
+for (const file of [
+  "room.glb",
+  ...furnitureCatalog.map((item) => item.model),
+]) {
+  if (!/^[\w-]+\.glb$/.test(file))
+    throw Error(`Unsupported model filename: ${file}`);
+  models[file] = (
+    await readFile(new URL(`../assets/models/${file}`, import.meta.url))
+  ).toString("base64");
 }
 await mkdir("dist", { recursive: true });
 const app = await build({
@@ -28,7 +43,10 @@ const app = await build({
   target: "es2022",
   outfile: "dist/app.js",
   write: false,
-  define: { __ASSET_IMAGES__: JSON.stringify(images) },
+  define: {
+    __ASSET_IMAGES__: JSON.stringify(images),
+    __ASSET_MODELS__: JSON.stringify(models),
+  },
 });
 const js = app.outputFiles
   .find((file) => file.path.endsWith(".js"))

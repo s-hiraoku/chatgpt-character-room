@@ -1,6 +1,6 @@
 {
   "name": "chatgpt-character-room",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "だらぱんと過ごす、自分のキャラと背景を使ったMCP App",
@@ -8,6 +8,7 @@
     "node": ">=22.18"
   },
   "scripts": {
+    "build:models": "node scripts/build-room-models.mjs",
     "setup:blender": "bash scripts/setup-blender.sh",
     "dev:blender": "bash scripts/start-blender.sh",
     "check:blender": "node scripts/verify-blender-mcp.mjs",

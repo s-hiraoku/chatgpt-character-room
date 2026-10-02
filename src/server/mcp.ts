@@ -7,7 +7,7 @@ import { roomSchema, toolSchemas, type ToolName } from "../shared/contracts.js";
 import { RoomStore } from "./store.js";
 import { callRoomTool } from "./tools.js";
 
-export const UI_URI = "ui://character-room/room-v1.html";
+export const UI_URI = "ui://character-room/room-v2.html";
 const icon = {
   src:
     "data:image/svg+xml," +
@@ -22,12 +22,12 @@ export function createMcpServer(store: RoomStore, html: string) {
     {
       name: "chatgpt-character-room",
       title: "だらぱんの部屋",
-      version: "0.1.0",
+      version: "0.2.0",
       icons: [icon],
     },
     {
       instructions:
-        "部屋のキャラはサイバーパンダの『だらぱん』です。room_openで開きます。変更前にroom_getで最新のroomを取得し、sceneの必要な項目だけを変更してroom_updateへ渡してください。配置IDは保持してください。追加時の配置IDは新しいUUIDを使い、既存キャラを保持してください。素材はroom_catalogで確認できます。画像や表情を生成する機能はありません。",
+        "3Dの部屋にはサイバーパンダの『だらぱん』とパンダの『もちぱん』がいます。scene.versionは2、placementsはキャラ、furnitureは家具です。xは床の左右10〜90、yは窓側45〜手前96、sizeは基準5mに対する高さの割合です。だらぱん27、もちぱん14が初期サイズです。家具のrotationは度単位、scaleは0.6〜1.6です。room_openで開きます。変更前にroom_getで最新のroomを取得し、sceneの必要な項目だけを変更してroom_updateへ渡してください。配置IDは保持してください。追加時の配置IDは新しいUUIDを使い、既存のキャラと家具を保持してください。素材はroom_catalogで確認できます。画像や表情を生成する機能はありません。",
     },
   );
   new OpenAIExtensions(server);
@@ -70,12 +70,12 @@ export function createMcpServer(store: RoomStore, html: string) {
       room_update: {
         title: "部屋の配置を変更",
         description:
-          "キャラの追加・削除・左右反転・位置・大きさ・バリエーション・背景を変更して画面に表示します。room_getで取得したsceneを編集し、同じrevisionをbaseRevisionへ渡してください。未変更のキャラを保持してください。",
+          "キャラの追加・削除・左右反転・位置・大きさ・バリエーション・背景・家具の追加削除位置回転スケールを変更して画面に表示します。room_getで取得したsceneを編集し、同じrevisionをbaseRevisionへ渡してください。未変更のキャラと家具を保持してください。",
       },
       room_catalog: {
         title: "素材一覧",
         description:
-          "使用可能なキャラ、バリエーション、背景のIDと名前を取得します。未登録の素材や表情は指定できません。",
+          "使用可能なキャラ、バリエーション、家具、背景のIDと名前を取得します。未登録の素材や表情は指定できません。",
       },
     };
   for (const name of Object.keys(toolSchemas) as ToolName[]) {

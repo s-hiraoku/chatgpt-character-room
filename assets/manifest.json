@@ -1,0 +1,42 @@
+[
+  {
+    "file": "characters/darapan-cyber.png",
+    "width": 1024,
+    "height": 1536,
+    "mode": "RGBA",
+    "alphaRange": [
+      0,
+      254
+    ],
+    "sha256": "00385e2d6b04cb0c4376c02320770c811ec295e39b9d700be9f88477e5e9a9b3",
+    "transparentPixels": 810288
+  },
+  {
+    "file": "characters/mochipan.png",
+    "width": 1312,
+    "height": 1199,
+    "mode": "RGBA",
+    "alphaRange": [
+      0,
+      255
+    ],
+    "sha256": "49857575c8a7e675e5bc25673f139be815991894d7604a5903923682d4d46dba",
+    "transparentPixels": 969605
+  },
+  {
+    "file": "concepts/darapan-mochipan-room.png",
+    "width": 1536,
+    "height": 1024,
+    "mode": "RGB",
+    "alphaRange": null,
+    "sha256": "66072746c0ad26320292a65d706061d2788a87506ea53db58cc183a492db02d0"
+  },
+  {
+    "file": "references/darapan-design-sheet.png",
+    "width": 1448,
+    "height": 1086,
+    "mode": "RGB",
+    "alphaRange": null,
+    "sha256": "236df6f8f4439449397a493cfb5d18a80c40bfb12661570d254a762d41130138"
+  }
+]

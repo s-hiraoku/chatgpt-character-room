@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>だらぱんの部屋</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23294b3f'/%3E%3Ctext x='32' y='46' text-anchor='middle' font-size='48' fill='%23d7f2bb'%3E%E2%97%92%3C/text%3E%3C/svg%3E"
+    />
+    <!-- APP_STYLE -->
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="header">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">◒</span>
+          <div>
+            <p class="eyebrow">DARAPAN & MOCHIPAN</p>
+            <h1>だらぱんの部屋</h1>
+          </div>
+        </div>
+        <span id="connection" class="connection">準備中</span>
+      </header>
+      <main class="workspace">
+        <section class="room-panel" aria-labelledby="scene-heading">
+          <div class="scene-topline">
+            <div>
+              <p class="eyebrow">MY LITTLE ATELIER</p>
+              <h2 id="scene-heading">夜のアトリエ</h2>
+            </div>
+            <label class="edit-toggle"
+              ><input type="checkbox" id="edit-mode" checked />配置を編集</label
+            >
+          </div>
+          <div
+            class="stage"
+            id="stage"
+            data-background="night"
+            aria-label="キャラクターの部屋"
+          >
+            <div
+              id="room-fallback"
+              class="room-fallback"
+              aria-hidden="true"
+            ></div>
+            <p id="scene-loading" class="scene-loading" role="status">
+              部屋を読み込んでいます…
+            </p>
+            <div class="actors" id="actors"></div>
+            <p id="empty" class="empty" hidden>
+              まだ誰もいません。<br />キャラを追加して、部屋を作ろう。
+            </p>
+            <span class="scene-tag">DARAPAN'S ATELIER</span>
+          </div>
+          <div
+            id="camera-controls"
+            class="camera-controls"
+            aria-label="視点の操作"
+          >
+            <button type="button" id="camera-left" aria-label="視点を左へ回す">
+              ↶
+            </button>
+            <button type="button" id="camera-right" aria-label="視点を右へ回す">
+              ↷
+            </button>
+            <button type="button" id="camera-in" aria-label="部屋に近づく">
+              ＋
+            </button>
+            <button type="button" id="camera-out" aria-label="部屋から離れる">
+              −
+            </button>
+            <button type="button" id="camera-reset">視点を戻す</button>
+          </div>
+          <div class="scene-caption">
+            <span>だらぱんともちぱん、ふたりのアトリエ</span
+            ><span id="count">—</span>
+          </div>
+          <section
+            class="furniture-section"
+            aria-labelledby="furniture-heading"
+          >
+            <div class="section-heading">
+              <h3 id="furniture-heading">家具を置く</h3>
+              <span id="furniture-count">—</span>
+            </div>
+            <div id="furniture-catalog" class="furniture-catalog"></div>
+          </section>
+          <section
+            class="background-section"
+            aria-labelledby="background-heading"
+          >
+            <h3 id="background-heading">背景を選ぶ</h3>
+            <div id="backgrounds" class="background-options"></div>
+          </section>
+          <p class="hint">
+            キャラと家具をドラッグして配置。何もないところをドラッグすると視点が回ります。矢印キーやスライダーでも調整できます。
+          </p>
+        </section>
+        <aside class="inspector" aria-labelledby="inspector-heading">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">CHARACTERS</p>
+              <h2 id="inspector-heading">部屋の仲間</h2>
+            </div>
+            <span class="small-dot" aria-hidden="true"></span>
+          </div>
+          <div id="character-list" class="character-list"></div>
+          <button type="button" id="add" class="add-button" disabled>
+            ＋ キャラを追加
+          </button>
+          <label class="field-label" for="add-character">追加するキャラ</label
+          ><select id="add-character"></select>
+          <div id="selection" class="selection" hidden>
+            <hr />
+            <div class="selection-title">
+              <h3 id="selected-name">だらぱん</h3>
+              <span>配置の調整</span>
+            </div>
+            <label class="field-label" for="variant">バリエーション</label
+            ><select id="variant"></select>
+            <label class="range-label" for="size"
+              >大きさ <output id="size-value"></output></label
+            ><input id="size" type="range" min="8" max="70" step="1" />
+            <label class="range-label" for="x"
+              >左右 <output id="x-value"></output></label
+            ><input id="x" type="range" min="10" max="90" step="1" />
+            <label class="range-label" for="y"
+              >奥行き <output id="y-value"></output></label
+            ><input id="y" type="range" min="45" max="96" step="1" />
+            <label class="flip"
+              ><input type="checkbox" id="flip" />左右を反転</label
+            >
+            <button type="button" id="remove" class="remove-button">
+              このキャラを部屋から外す
+            </button>
+          </div>
+          <section
+            class="placed-furniture"
+            aria-labelledby="placed-furniture-heading"
+          >
+            <hr />
+            <h3 id="placed-furniture-heading">部屋の家具</h3>
+            <div id="furniture-list" class="furniture-list"></div>
+            <div id="furniture-selection" hidden>
+              <h3 id="furniture-name"></h3>
+              <label class="range-label" for="furniture-x"
+                >左右 <output id="furniture-x-value"></output></label
+              ><input
+                id="furniture-x"
+                type="range"
+                min="10"
+                max="90"
+                step="1"
+              />
+              <label class="range-label" for="furniture-y"
+                >奥行き <output id="furniture-y-value"></output></label
+              ><input
+                id="furniture-y"
+                type="range"
+                min="45"
+                max="96"
+                step="1"
+              />
+              <label class="range-label" for="furniture-rotation"
+                >向き <output id="furniture-rotation-value"></output></label
+              ><input
+                id="furniture-rotation"
+                type="range"
+                min="0"
+                max="359"
+                step="1"
+              />
+              <label class="range-label" for="furniture-scale"
+                >大きさ <output id="furniture-scale-value"></output></label
+              ><input
+                id="furniture-scale"
+                type="range"
+                min="0.6"
+                max="1.6"
+                step="0.1"
+              />
+              <button type="button" id="remove-furniture" class="remove-button">
+                この家具を部屋から外す
+              </button>
+            </div>
+          </section>
+          <div class="save-actions">
+            <button type="button" id="save" disabled>配置を保存</button
+            ><button type="button" id="load" disabled>配置を読み込む</button
+            ><input
+              id="load-file"
+              type="file"
+              accept="application/json,.json"
+              hidden
+            />
+          </div>
+          <p class="save-note">配置はJSONファイルに保存できます。</p>
+        </aside>
+      </main>
+      <footer>
+        <p id="status" role="status" aria-live="polite">
+          部屋を準備しています。
+        </p>
+        <span class="footer-note">A LITTLE ROOM, YOUR OWN WORLD.</span>
+      </footer>
+    </div>
+    <!-- APP_SCRIPT -->
+  </body>
+</html>
